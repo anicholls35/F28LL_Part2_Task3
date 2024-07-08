@@ -5,6 +5,17 @@
  * been done for the purpose of this coursework. A Brief explanation of what the Static keyword does in Java will
  * be provided in my video explanation and demo of the code.
  *
+ * <br><br>
+ * Dummy Data Sourced from:
+ * <a href="https://www.kaggle.com/datasets/lakshmi25npathi/santander-customer-transaction-prediction-dataset?resource=download">
+ *     CSV Santander Customer Transaction Prediction Dataset
+ * </a>
+ * <br><br>
+ * <h3><i>
+ *     NOTE: Dataset used for this coursework was sourced via a 3rd party due to the nature of my company;
+ *     real data can't be used - even from test servers.
+ * </i></h3>
+ *
  * @author Adam Nicholls
  * @version 1
  * @since 08.07.2024
