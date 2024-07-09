@@ -5,6 +5,8 @@ import java.nio.file.Paths;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 /**
@@ -17,12 +19,12 @@ import java.util.stream.Stream;
  * <br><br>
  * Dummy Data Sourced from:
  * <a href="https://www.kaggle.com/datasets/prasad22/daily-transactions-dataset?resource=download">
- *     CSV Daily Transactions Dataset
+ * CSV Daily Transactions Dataset
  * </a>
  * <br><br>
  * <h3><i>
- *     NOTE: Dataset used for this coursework was sourced via a 3rd party due to the nature of my company;
- *     real data can't be used - even from test servers.
+ * NOTE: Dataset used for this coursework was sourced via a 3rd party due to the nature of my company;
+ * real data can't be used - even from test servers.
  * </i></h3>
  *
  * @author Adam Nicholls
@@ -33,25 +35,78 @@ class F28LLPart2Task3 {
     public static void main(String[] args) {
         CsvReader reader = new CsvReader();
 
-        reader.read("Daily Household Transactions.csv").stream()
+        AtomicReference<List<Transaction>> transactions = new AtomicReference<>(reader.read("Daily Household Transactions.csv").stream()
                 .map(Transaction::fromMap)
-                .filter(transaction -> {
-                    try {
-                        Field[] fields = transaction.getClass().getDeclaredFields();
-                        for (Field field : fields) {
-                            field.setAccessible(true);
-                            if (field.get(transaction) == null) return false;
-                            if (field.getType() == String.class && ((String) field.get(transaction)).isBlank())
-                                return false;
-                        }
-                        return true;
-                    } catch (Exception e) {
-                        System.out.println("removing transaction due to invalid data");
-                        return false;
+                .toList());
+
+        performAlteration(transactions, "Data Validation", true, stream -> {
+            transactions.set(stream.filter(transaction -> {
+                try {
+                    Field[] fields = transaction.getClass().getDeclaredFields();
+                    for (Field field : fields) {
+                        field.setAccessible(true);
+                        if (field.get(transaction) == null) return false;
+                        if (field.getType() == String.class && ((String) field.get(transaction)).isBlank())
+                            return false;
                     }
-                })
-                .distinct()
-                .forEach(System.out::println);
+                    return true;
+                } catch (Exception e) {
+                    return false;
+                }
+            }).toList());
+
+            return "Total number after validation " + transactions.get().size();
+        });
+
+        performAlteration(transactions, "Remove Duplicates", true, stream -> {
+            transactions.set(
+                    stream.distinct().toList()
+            );
+
+            return "Total number after duplication removal " + transactions.get().size();
+        });
+
+        performAlteration(transactions, "Sum all Cash Transactions", false, stream -> {
+            double cashSum = stream
+                    .filter(Transaction::isCashTransaction)
+                    .mapToDouble(Transaction::getAmount)
+                    .sum();
+
+            return String.format("Total Cash Sum: %.2f", cashSum);
+        });
+
+        performAlteration(transactions, "Average Spend", false, stream -> {
+            OptionalDouble average = stream
+                    .mapToDouble(Transaction::getAmount)
+                    .average();
+
+            if (average.isPresent()) return String.format("Avg Spending: %.2f", average.getAsDouble());
+            else return "Unable to get avg Spend";
+        });
+    }
+
+    /**
+     * This method will allow for easy alterations to be performed to a list of transactions. It will create a header
+     * for the alteration section to explain what is taking place, it will then convert the list of transactions
+     * to a stream and allow the user of the method to act upon in via a lambda. The functional lambda will
+     * return a result string will this method will print to the console
+     * @param transactions List of transactions to convert ot a stream
+     * @param alterationHeader Name of alteration to append to the section header
+     * @param streamFunc A function lambda where you can apply alterations to the list of transactions in a functional mannor
+     */
+    static void performAlteration (AtomicReference<List<Transaction>> transactions,
+                                   String alterationHeader,
+                                   boolean showPreAlterationCount,
+                                   Function<Stream<Transaction>, String> streamFunc) {
+
+        System.out.println("======== " + alterationHeader + " ========");
+        if (showPreAlterationCount)
+            System.out.println("Total number of transactions before alteration: " + transactions.get().size());
+
+        String response = streamFunc.apply(transactions.get().stream());
+
+        System.out.println(response);
+        System.out.println();
     }
 
     /**
@@ -96,6 +151,13 @@ class F28LLPart2Task3 {
      * By converting the raw data into a Java object, it will allow me to perform more indepth data
      * processing than if handled in a raw format - for example, checking individual fields for valid data,
      * ensuring that the data object itself isn't empty or null etc...
+     *
+     * <br><br>
+     * <p>
+     * It also allows for me to take advantage of the toString() and equals() methods. toString() allows me to
+     * display the data to the console after being processed in a nicer format and equals() allows to take advantage
+     * of Java Stream distinct() method - which will remove all duplicates by comparing every field not the object
+     * instance address.
      */
     static final class Transaction {
         private Date date;
@@ -153,36 +215,12 @@ class F28LLPart2Task3 {
             }
         }
 
-        public Date getDate() {
-            return date;
-        }
-
-        public String getMode() {
-            return mode;
-        }
-
-        public String getCategory() {
-            return category;
-        }
-
-        public String getSubCategory() {
-            return subCategory;
-        }
-
-        public String getNote() {
-            return note;
+        public boolean isCashTransaction() {
+            return "Cash".equals(mode);
         }
 
         public Double getAmount() {
             return amount;
-        }
-
-        public String getIncomeOrExpense() {
-            return incomeOrExpense;
-        }
-
-        public String getCurrency() {
-            return currency;
         }
 
         @Override
