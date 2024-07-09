@@ -173,6 +173,75 @@ class F28LLPart2Task3 {
 
             return String.format("Median: %.2f", median);
         });
+
+        performAlteration(transactions, "Transaction count per Category", false, stream -> {
+            StringBuilder sb = new StringBuilder();
+
+            stream.collect(Collectors.groupingBy(Transaction::getCategory, Collectors.counting()))
+                    .forEach((category, count) -> {
+                        sb.append(category);
+                        sb.append(": ");
+                        sb.append(count);
+                        sb.append("\n");
+                    });
+
+            return sb.toString();
+        });
+
+        performAlteration(transactions, "Transaction count per Mode", false, stream -> {
+            StringBuilder sb = new StringBuilder();
+
+            stream.collect(Collectors.groupingBy(Transaction::getMode, Collectors.counting()))
+                    .forEach((mode, count) -> {
+                        sb.append(mode);
+                        sb.append(": ");
+                        sb.append(count);
+                        sb.append("\n");
+                    });
+
+            return sb.toString();
+        });
+
+        performAlteration(transactions, "Transaction count per Income or Expense", false, stream -> {
+            StringBuilder sb = new StringBuilder();
+
+            stream.collect(Collectors.groupingBy(Transaction::getIncomeOrExpense, Collectors.counting()))
+                    .forEach((incomeOrExpense, count) -> {
+                        sb.append(incomeOrExpense);
+                        sb.append(": ");
+                        sb.append(count);
+                        sb.append("\n");
+                    });
+
+            return sb.toString();
+        });
+
+        performAlteration(transactions, "Transaction count per Date", false, stream -> {
+            StringBuilder sb = new StringBuilder();
+
+            Map<Integer, Long> groupedByYear = stream.collect(Collectors.groupingBy(transaction -> {
+                Calendar calendar = Calendar.getInstance();
+                calendar.setTime(transaction.getDate());
+                return calendar.get(Calendar.YEAR);
+            }, Collectors.counting()));
+
+            groupedByYear = groupedByYear.entrySet().stream()
+                    .collect(Collectors.toMap(
+                            Map.Entry::getKey,
+                            Map.Entry::getValue,
+                            (e1, e2) -> e1,
+                            LinkedHashMap::new
+                    ));
+
+            groupedByYear.forEach((year, count) -> {
+                sb.append(year);
+                sb.append(": ");
+                sb.append(count);
+                sb.append("\n");
+            });
+
+            return sb.toString();
+        });
     }
 
     /**
@@ -311,6 +380,22 @@ class F28LLPart2Task3 {
 
         public Double getAmount() {
             return amount;
+        }
+
+        public String getCategory() {
+            return category;
+        }
+
+        public String getMode() {
+            return mode;
+        }
+
+        public String getIncomeOrExpense() {
+            return incomeOrExpense;
+        }
+
+        public Date getDate() {
+            return date;
         }
 
         @Override
