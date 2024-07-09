@@ -7,6 +7,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -66,22 +67,111 @@ class F28LLPart2Task3 {
             return "Total number after duplication removal " + transactions.get().size();
         });
 
-        performAlteration(transactions, "Sum all Cash Transactions", false, stream -> {
-            double cashSum = stream
-                    .filter(Transaction::isCashTransaction)
-                    .mapToDouble(Transaction::getAmount)
-                    .sum();
+        performAlteration(transactions, "Sum & Average Spend", false, stream -> {
+            DoubleSummaryStatistics stats = stream.collect(Collectors.summarizingDouble(Transaction::getAmount));
 
-            return String.format("Total Cash Sum: %.2f", cashSum);
+            return String.format("Sum: %.2f%nAvg: %.2f", stats.getSum(), stats.getAverage());
         });
 
-        performAlteration(transactions, "Average Spend", false, stream -> {
-            OptionalDouble average = stream
-                    .mapToDouble(Transaction::getAmount)
-                    .average();
+        performAlteration(transactions, "Sum & Average Cash Spend", false, stream -> {
+            DoubleSummaryStatistics stats = stream
+                    .filter(Transaction::isCashTransaction)
+                    .collect(Collectors.summarizingDouble(Transaction::getAmount));
 
-            if (average.isPresent()) return String.format("Avg Spending: %.2f", average.getAsDouble());
-            else return "Unable to get avg Spend";
+            return String.format("Sum: %.2f%nAvg: %.2f", stats.getSum(), stats.getAverage());
+        });
+
+        performAlteration(transactions, "Sum & Average Non-Cash Spend", false, stream -> {
+            DoubleSummaryStatistics stats = stream
+                    .filter(transaction -> !transaction.isCashTransaction())
+                    .collect(Collectors.summarizingDouble(Transaction::getAmount));
+
+            return String.format("Sum: %.2f%nAvg: %.2f", stats.getSum(), stats.getAverage());
+        });
+
+        performAlteration(transactions, "Transaction Spending Mode", false, stream -> {
+            Map<Double, Long> freqMap = stream.collect(Collectors.groupingBy(Transaction::getAmount, Collectors.counting()));
+
+            Double mode = freqMap.entrySet().stream()
+                    .max(Map.Entry.comparingByValue())
+                    .map(Map.Entry::getKey)
+                    .orElse(Double.NaN);
+
+            return String.format("Mode: %.2f", mode);
+        });
+
+        performAlteration(transactions, "Transaction Cash Spending Mode", false, stream -> {
+            Map<Double, Long> freqMap = stream
+                    .filter(Transaction::isCashTransaction)
+                    .collect(Collectors.groupingBy(Transaction::getAmount, Collectors.counting()));
+
+            Double mode = freqMap.entrySet().stream()
+                    .max(Map.Entry.comparingByValue())
+                    .map(Map.Entry::getKey)
+                    .orElse(Double.NaN);
+
+            return String.format("Mode: %.2f", mode);
+        });
+
+        performAlteration(transactions, "Standard Deviation of Spending", false, stream -> {
+            List<Transaction> transactionList = stream.toList();
+
+            DoubleSummaryStatistics stats = transactionList.stream()
+                    .collect(Collectors.summarizingDouble(Transaction::getAmount));
+            double mean = stats.getAverage();
+
+            double varience = transactionList.stream()
+                    .mapToDouble(Transaction::getAmount)
+                    .map(amount -> Math.pow(amount - mean, 2))
+                    .average()
+                    .orElse(Double.NaN);
+
+            return String.format("Standard Deviation: %.2f", Math.sqrt(varience));
+        });
+
+        performAlteration(transactions, "Standard Deviation of Cash Spending", false, stream -> {
+            List<Transaction> transactionList = stream.filter(Transaction::isCashTransaction).toList();
+
+            DoubleSummaryStatistics stats = transactionList.stream()
+                    .collect(Collectors.summarizingDouble(Transaction::getAmount));
+            double mean = stats.getAverage();
+
+            double varience = transactionList.stream()
+                    .mapToDouble(Transaction::getAmount)
+                    .map(amount -> Math.pow(amount - mean, 2))
+                    .average()
+                    .orElse(Double.NaN);
+
+            return String.format("Standard Deviation: %.2f", Math.sqrt(varience));
+        });
+
+        performAlteration(transactions, "Median Spend", false, stream -> {
+            List<Double> amounts = stream
+                    .map(Transaction::getAmount)
+                    .sorted()
+                    .toList();
+
+            double median;
+            int size = amounts.size();
+            if (size % 2 == 0) median = (amounts.get(size / 2-1) + amounts.get(size / 2)) / 2.0;
+            else median = amounts.get(size / 2);
+
+            return String.format("Median: %.2f", median);
+        });
+
+        performAlteration(transactions, "Median Cash Spend", false, stream -> {
+            List<Double> amounts = stream
+                    .filter(Transaction::isCashTransaction)
+                    .map(Transaction::getAmount)
+                    .sorted()
+                    .toList();
+
+            double median;
+            int size = amounts.size();
+            if (size % 2 == 0) median = (amounts.get(size / 2-1) + amounts.get(size / 2)) / 2.0;
+            else median = amounts.get(size / 2);
+
+            return String.format("Median: %.2f", median);
         });
     }
 
